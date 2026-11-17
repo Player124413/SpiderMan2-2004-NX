@@ -9,6 +9,9 @@
 namespace androidhost {
 void Configure(const std::string& game_dir, uint32_t render_percent, uint32_t fps_cap, bool vsync, uint32_t aniso);
 const std::filesystem::path& GameDirectory();
+// Extract an owner-selected XDVDFS image into an empty staging folder. Empty means
+// success; otherwise the returned text is safe to show in the Java launcher.
+std::string ExtractDiscImage(const std::string& image_path, const std::string& destination_path);
 void SetForeground(bool foreground);
 }
 

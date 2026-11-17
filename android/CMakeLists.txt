@@ -68,6 +68,7 @@ file(GLOB GAME_SOURCES CONFIGURE_DEPENDS ${SM2_REPO}/src/*/*.cpp)
 set(ANDROID_SOURCES
     ${NATIVE}/android_main.cpp
     ${NATIVE}/android_host.cpp
+    ${NATIVE}/android_iso_import.cpp
     ${NATIVE}/android_input.cpp
     ${NATIVE}/android_audio.cpp
     ${NATIVE}/android_options.cpp

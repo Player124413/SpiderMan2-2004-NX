@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <exception>
 #include <filesystem>
 #include <mutex>
 #include <string>
@@ -76,6 +77,27 @@ extern "C" JNIEXPORT void JNICALL Java_com_spiderman2_android_NativeBridge_nativ
 
 extern "C" JNIEXPORT void JNICALL Java_com_spiderman2_android_NativeBridge_nativeSetForeground(JNIEnv*, jclass, jboolean foreground) {
     androidhost::SetForeground(foreground == JNI_TRUE);
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_com_spiderman2_android_NativeBridge_nativeExtractDisc(
+    JNIEnv* env, jclass, jstring image_path, jstring destination_path) {
+    if (!image_path || !destination_path) return env->NewStringUTF("The selected image or destination folder is empty.");
+    const char* image = env->GetStringUTFChars(image_path, nullptr);
+    const char* destination = env->GetStringUTFChars(destination_path, nullptr);
+    if (!image || !destination) {
+        if (image) env->ReleaseStringUTFChars(image_path, image);
+        if (destination) env->ReleaseStringUTFChars(destination_path, destination);
+        return env->NewStringUTF("The selected path could not be read.");
+    }
+    std::string error;
+    try {
+        error = androidhost::ExtractDiscImage(image, destination);
+    } catch (const std::exception&) {
+        error = "The disc image could not be unpacked because of a native storage error.";
+    }
+    env->ReleaseStringUTFChars(image_path, image);
+    env->ReleaseStringUTFChars(destination_path, destination);
+    return env->NewStringUTF(error.c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL Java_com_spiderman2_android_NativeBridge_nativeRuntimeSummary(JNIEnv* env, jclass) {

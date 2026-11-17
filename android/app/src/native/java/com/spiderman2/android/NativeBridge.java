@@ -26,5 +26,7 @@ public final class NativeBridge {
     public static native void nativeSetStick(int stick, float x, float y);
     public static native void nativeReleaseTouch();
     public static native void nativeSetForeground(boolean foreground);
+    /** Returns an empty string on success, otherwise a safe error message for the launcher. */
+    public static native String nativeExtractDisc(String imagePath, String destinationPath);
     public static native String nativeRuntimeSummary();
 }

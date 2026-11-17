@@ -35,6 +35,10 @@ public final class NativeBridge {
     public static void nativeReleaseTouch() { }
     public static void nativeSetForeground(boolean foreground) { }
 
+    public static String nativeExtractDisc(String imagePath, String destinationPath) {
+        return "Disc import is unavailable in the workflow mock APK.";
+    }
+
     public static String nativeRuntimeSummary() {
         return "Workflow mock APK · no native game runtime · " + configuration;
     }

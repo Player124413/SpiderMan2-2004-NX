@@ -95,19 +95,28 @@ To point at generated code outside this checkout, pass both properties:
 ## Install game files
 
 1. Install and open the APK; grant **All files access** when Android asks.
-2. Copy the *extracted* contents of your own disc to
-   `/storage/emulated/0/SpiderMan2Xbox/`, so it contains:
+2. Choose one of the following owner-copy workflows:
 
-   ```text
-   SpiderMan2Xbox/
-     default.xbe
-     data/
-       ... game files ...
-   ```
+   - **Import a disc image in the launcher:** enter a new, non-existent game-folder
+     path (the default is `/storage/emulated/0/SpiderMan2Xbox/`), tap **IMPORT AND
+     UNPACK DISC IMAGE**, then choose your original-Xbox `.iso`, `.xiso`, `.cci` or
+     `.cso` file. The launcher copies it into a temporary staging folder beside
+   the destination,
+     unpacks the XDVDFS tree into the selected folder, validates `default.xbe` and
+     `data/`, deletes the temporary image, and starts the game. The import needs
+     roughly twice the image size free while it runs. Split images and archives
+     (`.zip`, `.7z`, `.rar`) must be joined/extracted before import.
+   - **Copy extracted files yourself** to the selected folder, so it contains:
 
-   You may enter another ordinary storage path in the launcher. Disc images are
-   intentionally not imported by the launcher: extraction avoids needing a second
-   large temporary copy and makes the missing-data checks unambiguous.
+     ```text
+     SpiderMan2Xbox/
+       default.xbe
+       data/
+         ... game files ...
+     ```
+
+   Existing game folders are never overwritten by the importer. You may enter
+   another ordinary storage path in the launcher.
 3. Select performance and touch defaults, confirm the green **Game files ready**
    check, then tap **PLAY**.
 

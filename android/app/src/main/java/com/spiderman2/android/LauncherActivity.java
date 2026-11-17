@@ -34,10 +34,13 @@ public final class LauncherActivity extends Activity {
     private static final int INK = Color.rgb(17, 24, 35);
 
     private SharedPreferences prefs;
+    private GameImporter importer;
     private EditText gameDirectory;
     private TextView status;
     private TextView storageHint;
+    private Button importImage;
     private Button play;
+    private boolean importing;
     private Spinner render;
     private Spinner fps;
     private Spinner aniso;
@@ -49,6 +52,7 @@ public final class LauncherActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = PortPreferences.get(this);
+        importer = new GameImporter(this);
         setContentView(buildContent());
         restoreSettings();
     }
@@ -56,6 +60,56 @@ public final class LauncherActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         checkGame();
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != GameImporter.REQUEST) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            importing = false;
+            checkGame();
+            return;
+        }
+        String destinationPath = gameDirectory.getText().toString().trim();
+        if (destinationPath.isEmpty()) {
+            importing = false;
+            Toast.makeText(this, "Choose a game-folder path before importing", Toast.LENGTH_LONG).show();
+            checkGame();
+            return;
+        }
+        File destination = new File(destinationPath);
+        importer.importAndExtract(data.getData(), destination, (success, gameFolder) -> {
+            importing = false;
+            if (success) {
+                gameDirectory.setText(gameFolder.getAbsolutePath());
+                prefs.edit().putString(PortPreferences.GAME_DIR, gameFolder.getAbsolutePath()).apply();
+                checkGame();
+                launch();
+            } else {
+                checkGame();
+            }
+        });
+    }
+
+    private void chooseDiscImage() {
+        if (!hasStorageAccess()) {
+            requestStorageAccess();
+            Toast.makeText(this, "Allow game-folder access, then choose the disc image.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        String path = gameDirectory.getText().toString().trim();
+        if (path.isEmpty()) {
+            Toast.makeText(this, "Choose a game-folder path before importing", Toast.LENGTH_LONG).show();
+            return;
+        }
+        importing = importer.pick();
+        if (importing) {
+            storageHint.setText("Choose an original-Xbox disc image. The game folder must not already exist.");
+            status.setText("Waiting for disc image selection");
+            status.setTextColor(Color.rgb(174, 192, 213));
+            play.setEnabled(false);
+            importImage.setEnabled(false);
+        }
     }
 
     private View buildContent() {
@@ -94,6 +148,15 @@ public final class LauncherActivity extends Activity {
         Button storage = secondaryButton("ALLOW GAME FOLDER ACCESS");
         storage.setOnClickListener(v -> requestStorageAccess());
         root.addView(storage, match(dp(44)));
+        importImage = secondaryButton("IMPORT AND UNPACK DISC IMAGE");
+        importImage.setOnClickListener(v -> chooseDiscImage());
+        LinearLayout.LayoutParams importParams = match(dp(44));
+        importParams.topMargin = dp(8);
+        root.addView(importImage, importParams);
+        TextView importHint = label("Select your own Xbox .iso, .xiso, .cci or .cso image. It is copied to temporary storage, unpacked into the selected folder, then removed.",
+                13, Color.rgb(174, 192, 213));
+        importHint.setPadding(0, dp(7), 0, 0);
+        root.addView(importHint);
 
         root.addView(section("PERFORMANCE"));
         render = settingSpinner(root, "Render resolution", new String[] {"50% · Battery saver", "67% · Balanced", "85% · Quality", "100% · Native", "125% · High-end"});
@@ -153,20 +216,30 @@ public final class LauncherActivity extends Activity {
         File xbe = new File(root, "default.xbe");
         File data = new File(root, "data");
         if (!data.isDirectory()) data = new File(root, "DATA");
+        if (importing) {
+            storageHint.setText("The selected disc image is being imported and unpacked. Keep the app open.");
+            status.setText("Importing game image…");
+            status.setTextColor(Color.rgb(174, 192, 213));
+            play.setEnabled(false);
+            if (importImage != null) importImage.setEnabled(false);
+            return;
+        }
         if (!access) {
-            storageHint.setText("Storage access is needed to read the extracted game folder.");
+            storageHint.setText("Storage access is needed to read or unpack the game folder.");
             status.setText("Waiting for storage permission");
             status.setTextColor(Color.rgb(255, 195, 83));
             play.setEnabled(false);
+            if (importImage != null) importImage.setEnabled(false);
             return;
         }
+        if (importImage != null) importImage.setEnabled(true);
         storageHint.setText("Expected: " + root.getAbsolutePath() + "/default.xbe and /data/");
         if (xbe.isFile() && data.isDirectory()) {
             status.setText("Game files ready · Vulkan 1.1 required · ARM64 build");
             status.setTextColor(Color.rgb(128, 230, 159));
             play.setEnabled(true);
         } else {
-            status.setText("Game files not ready: copy default.xbe and the complete data folder.");
+            status.setText("Game files not ready: import a disc image or copy default.xbe and the complete data folder.");
             status.setTextColor(Color.rgb(255, 195, 83));
             play.setEnabled(false);
         }

@@ -1,9 +1,11 @@
 # Spider-Man 2 Android
 
 An **arm64 Vulkan** target for the original Xbox release. The game's x86 code is
-statically recompiled before the APK is built; this is not an emulator. The APK
-contains no game code, disc image, movies, music, or other assets. Build and use
-it only with files from your own legally acquired disc.
+statically recompiled before the APK is built; this is not an emulator. The
+repository and CI artifacts contain no game code, disc image, movies, music or
+other assets. A playable APK built locally includes code derived from the owner's
+`default.xbe`, so it must remain private and be used only with that owner's legally
+acquired disc.
 
 ## What is included
 

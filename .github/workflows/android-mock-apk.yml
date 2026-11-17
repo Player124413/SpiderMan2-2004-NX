@@ -1,0 +1,80 @@
+name: Android mock APK
+
+on:
+  push:
+    paths:
+      - ".github/workflows/android-mock-apk.yml"
+      - "android/**"
+  pull_request:
+    paths:
+      - ".github/workflows/android-mock-apk.yml"
+      - "android/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-mock-apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-mock-apk:
+    name: Package mock APK (no game data)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle
+            android/**/gradle-wrapper.properties
+
+      # ubuntu-24.04 GitHub-hosted runners already include the Android command-line
+      # tools. Using them directly avoids a second tool-bootstrap download.
+      - name: Install Android SDK Platform 35
+        run: |
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?Android SDK is not available}}"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          command -v sdkmanager
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Assemble Java-only mock APK
+        working-directory: android
+        run: |
+          ./gradlew --no-daemon --stacktrace :app:assembleDebug \
+            -PmockBuild=true \
+            -PversionCode="${GITHUB_RUN_NUMBER}" \
+            -PversionName="ci-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+
+      - name: Verify that the APK is a data-free workflow test
+        working-directory: android
+        run: |
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          unzip -t "$apk" > /dev/null
+          unzip -l "$apk" | grep -q " classes.dex$"
+          if unzip -l "$apk" | grep -Eiq '(^|/)(default\.xbe|x86_recomp\.|game\.iso|game\.bin)$'; then
+            echo "The mock artifact must not contain game files or generated game code." >&2
+            exit 1
+          fi
+          sha256sum "$apk" | tee app/build/outputs/apk/debug/app-debug.apk.sha256
+
+      - name: Upload mock APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: spiderman2-android-mock-apk-${{ github.run_number }}
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 14

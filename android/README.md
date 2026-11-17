@@ -37,6 +37,28 @@ configuration and use its own Spider-Man-specific hooks.
 - A PC to generate C++ from your own `default.xbe`. The generation can be done
   once, then Gradle compiles that generated code for `arm64-v8a`.
 
+## CI mock APK
+
+[`.github/workflows/android-mock-apk.yml`](../.github/workflows/android-mock-apk.yml)
+packages an installable **workflow-test APK** on every Android change and can also
+be run manually from the Actions tab. It deliberately runs:
+
+```sh
+./gradlew :app:assembleDebug -PmockBuild=true
+```
+
+This selects Java-only `GameActivity` and `NativeBridge` test doubles. The mock
+APK validates the Android manifest, resources, launcher, editable Xbox touch
+layout, Java 17 compilation, dexing, signing and artifact upload. It contains
+**no** XBE, ISO, generated recompilation code, SDL checkout, NDK output, native
+runtime or game asset. The workflow checks that condition before upload; the
+artifact is therefore only a CI smoke-test and cannot play the game.
+
+The real native build intentionally has no URL-based game download step. Keep an
+owned disc image and its extracted files off GitHub Actions, Git history, logs and
+artifacts. Generate code locally (or on a private owner-controlled runner) from
+your own `default.xbe`, then use the production build below.
+
 ## Build
 
 From the repository root, first generate code from your owned XBE:

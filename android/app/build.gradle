@@ -2,25 +2,32 @@ plugins {
     id "com.android.application"
 }
 
+// CI deliberately uses a Java-only mock. It proves that the Android/Gradle packaging
+// path works without downloading SDL, configuring CMake, or handling player-owned game
+// material. Production builds always take the native branch below.
+def mockBuild = providers.gradleProperty("mockBuild").map { it.toBoolean() }.getOrElse(false)
+
 // SDL provides the Android activity glue and the native window used by the Vulkan renderer.
 // It is intentionally not committed: Gradle fetches the pinned source only when it is absent.
 def sdlDir = file("../third_party/SDL")
 def sdlTag = "release-3.4.16"
-tasks.register("fetchSDL") {
-    onlyIf { !new File(sdlDir, "CMakeLists.txt").exists() }
-    doLast {
-        exec {
-            commandLine "git", "clone", "--depth", "1", "--branch", sdlTag,
-                    "https://github.com/libsdl-org/SDL.git", sdlDir.absolutePath
+if (!mockBuild) {
+    tasks.register("fetchSDL") {
+        onlyIf { !new File(sdlDir, "CMakeLists.txt").exists() }
+        doLast {
+            exec {
+                commandLine "git", "clone", "--depth", "1", "--branch", sdlTag,
+                        "https://github.com/libsdl-org/SDL.git", sdlDir.absolutePath
+            }
         }
     }
+    preBuild.dependsOn("fetchSDL")
 }
-preBuild.dependsOn("fetchSDL")
 
 android {
     namespace "com.spiderman2.android"
     compileSdk 35
-    ndkVersion "28.2.13676358"
+    if (!mockBuild) ndkVersion "28.2.13676358"
 
     defaultConfig {
         applicationId "com.spiderman2.android"
@@ -28,13 +35,15 @@ android {
         targetSdk 35
         versionCode project.hasProperty("versionCode") ? project.versionCode.toInteger() : 1
         versionName project.hasProperty("versionName") ? project.versionName : "0.1.0-dev"
-        ndk { abiFilters "arm64-v8a" }
-        externalNativeBuild {
-            cmake {
-                arguments "-DANDROID_STL=c++_shared", "-DANDROID_ARM_MODE=arm"
-                // An advanced build can keep generated code and default.xbe outside the checkout.
-                if (project.hasProperty("xbeGenerated")) arguments "-DXBE_GENERATED=${project.xbeGenerated}"
-                if (project.hasProperty("xbeImage")) arguments "-DXBE_IMAGE=${project.xbeImage}"
+        if (!mockBuild) {
+            ndk { abiFilters "arm64-v8a" }
+            externalNativeBuild {
+                cmake {
+                    arguments "-DANDROID_STL=c++_shared", "-DANDROID_ARM_MODE=arm"
+                    // An advanced build can keep generated code and default.xbe outside the checkout.
+                    if (project.hasProperty("xbeGenerated")) arguments "-DXBE_GENERATED=${project.xbeGenerated}"
+                    if (project.hasProperty("xbeImage")) arguments "-DXBE_IMAGE=${project.xbeImage}"
+                }
             }
         }
     }
@@ -42,19 +51,32 @@ android {
     buildTypes {
         debug {
             // Recompiled game code is not usable at -O0. Keep debugging symbols, optimise everything.
-            externalNativeBuild { cmake { arguments "-DCMAKE_BUILD_TYPE=RelWithDebInfo" } }
+            if (!mockBuild) externalNativeBuild { cmake { arguments "-DCMAKE_BUILD_TYPE=RelWithDebInfo" } }
         }
         release {
             minifyEnabled false
             signingConfig signingConfigs.debug
-            externalNativeBuild { cmake { arguments "-DCMAKE_BUILD_TYPE=Release" } }
+            if (!mockBuild) externalNativeBuild { cmake { arguments "-DCMAKE_BUILD_TYPE=Release" } }
         }
     }
 
-    externalNativeBuild { cmake { path file("../CMakeLists.txt"); version "3.22.1" } }
-    sourceSets {
-        main { java.srcDirs += new File(sdlDir, "android-project/app/src/main/java") }
+    if (!mockBuild) {
+        externalNativeBuild { cmake { path file("../CMakeLists.txt"); version "3.22.1" } }
+        sourceSets {
+            main { java.srcDir new File(sdlDir, "android-project/app/src/main/java") }
+        }
+    } else {
+        // Do not merely fake game input: replace both JNI-facing classes so the mock APK
+        // is independently installable and cannot load or claim to contain the game.
+        sourceSets {
+            main {
+                java.exclude "com/spiderman2/android/GameActivity.java"
+                java.exclude "com/spiderman2/android/NativeBridge.java"
+                java.srcDir "src/mock/java"
+            }
+        }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

@@ -70,11 +70,12 @@ For a private, owner-controlled fork, use
 runner only, extracts `default.xbe`, runs `xbe_recomp`, and builds the arm64
 release APK. Source image, XBE and generated C++ are removed at the end.
 
-The workflow deliberately refuses to run in a public repository: dispatch inputs
-and playable artifacts could otherwise expose a player's game material. Create a
-private fork before using its URL field; do not paste an image link into the
-public CI/mock workflow. You can instead build locally with the instructions
-below.
+The URL is passed to the runner without being echoed by the workflow, and the
+source image, XBE and generated C++ are removed after the run. A private fork is
+still recommended for owner builds: GitHub retains workflow metadata and an APK
+can be downloaded by people with repository access. Do not paste an image link
+into the public **Android mock APK** workflow; use **Build owner Android APK**
+or build locally with the instructions below.
 
 ## Build
 

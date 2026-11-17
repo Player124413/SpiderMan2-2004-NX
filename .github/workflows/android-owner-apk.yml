@@ -1,9 +1,8 @@
 name: Build owner Android APK
 
 # This is intentionally separate from android-mock-apk.yml. The mock workflow is
-# public CI and never accepts a game image. This owner-only workflow refuses to
-# run in public repositories because dispatch inputs and build artifacts must not
-# expose an owner's game material.
+# public CI and never accepts a game image. This manually started owner workflow
+# accepts a direct owner-supplied image URL and never prints that URL itself.
 on:
   workflow_dispatch:
     inputs:
@@ -35,12 +34,6 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Require a private repository
-        if: ${{ !github.event.repository.private }}
-        run: |
-          echo "::error::Owner APK builds are disabled in public repositories. Run this workflow only from your private fork."
-          exit 1
-
       - name: Check out source
         uses: actions/checkout@v7
 

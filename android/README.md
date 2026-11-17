@@ -15,9 +15,10 @@ it only with files from your own legally acquired disc.
   them from the launcher before starting the game.
 - Native SDL controller input and rumble, merged with a low-latency multi-touch
   Xbox controller on port 0.
-- Editable controls: two sticks, face/shoulder/trigger/menu buttons, presets,
-  opacity and global scale. In-game **EDIT** lets players drag controls and pinch
-  with a second finger to resize them; layouts are normalized and persist across
+- **Original Xbox controls only:** two sticks, D-pad, A/B/X/Y, Black/White,
+  left/right triggers, Start and Back. There are no gameplay macros or Android-only
+  action buttons. Hold three fingers for 0.5 seconds to enter the editor, then drag
+  a control or pinch it with a second finger to resize it; layouts persist across
   phone and tablet resolutions.
 - Pause/resume-aware Vulkan surface handling and an Android audio output fed from
   the port's DirectSound mixer.
@@ -91,9 +92,9 @@ Android's app-specific external files directory (`Android/data/.../files`).
 
 ## Controls and performance notes
 
-- The overlay labels are practical defaults; Spider-Man's in-game prompts still
-  describe the original Xbox mappings. A Bluetooth/USB controller always works
-  alongside the touch state, with its stronger analogue input taking precedence.
+- The overlay maps one-for-one to the original Xbox controller: two sticks,
+  D-pad, A/B/X/Y, Black/White, LT/RT, Start and Back. A Bluetooth/USB controller
+  always works alongside the touch state, with its stronger analogue input taking precedence.
 - Use **Balanced** first. Increase render scale gradually after a stable play
   session. 90/120 FPS only help on displays and devices that can sustain them;
   unlimited FPS may increase heat and power use.

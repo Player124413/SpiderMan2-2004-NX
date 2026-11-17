@@ -37,6 +37,13 @@ public final class TouchOverlayView extends View {
     private float pinchScale;
     private float opacity;
     private float overallSize;
+    private boolean editGesturePending;
+    private final Runnable editGesture = () -> {
+        if (!editing && editGesturePending) {
+            editGesturePending = false;
+            beginEdit();
+        }
+    };
 
     public TouchOverlayView(Context context) {
         super(context);
@@ -58,6 +65,7 @@ public final class TouchOverlayView extends View {
     }
 
     public void releaseAll() {
+        cancelEditGesture();
         pointers.clear();
         NativeBridge.nativeReleaseTouch();
         invalidate();
@@ -70,11 +78,9 @@ public final class TouchOverlayView extends View {
         if (getWidth() == 0 || getHeight() == 0) return;
         for (ControlLayout.Id id : ControlLayout.Id.values()) {
             ControlLayout.Entry entry = layout.get(id);
-            if (!entry.visible) continue;
             drawControl(canvas, id, entry, selected == id && editing);
         }
         if (editing) drawEditor(canvas);
-        else drawEditAffordance(canvas);
     }
 
     private void drawControl(Canvas canvas, ControlLayout.Id id, ControlLayout.Entry entry, boolean highlighted) {
@@ -94,7 +100,7 @@ public final class TouchOverlayView extends View {
             canvas.drawCircle(cx, cy, radius * .52f, paint);
             canvas.drawLine(cx - radius * .7f, cy, cx + radius * .7f, cy, paint);
             canvas.drawLine(cx, cy - radius * .7f, cx, cy + radius * .7f, paint);
-        } else if (id == ControlLayout.Id.RT || id == ControlLayout.Id.LT || id == ControlLayout.Id.RB || id == ControlLayout.Id.LB) {
+        } else if (isPill(id)) {
             RectF pill = new RectF(cx - radius * 1.35f, cy - radius * .62f, cx + radius * 1.35f, cy + radius * .62f);
             canvas.drawRoundRect(pill, radius * .48f, radius * .48f, paint);
         } else {
@@ -116,19 +122,6 @@ public final class TouchOverlayView extends View {
         canvas.drawText(id.label, cx, baseline, text);
     }
 
-    private void drawEditAffordance(Canvas canvas) {
-        float w = dp(66), h = dp(30), x = getWidth() - w - dp(14), y = dp(12);
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(DARK);
-        paint.setAlpha(180);
-        canvas.drawRoundRect(new RectF(x, y, x + w, y + h), dp(15), dp(15), paint);
-        text.setColor(Color.WHITE);
-        text.setTextSize(dp(12));
-        text.setTextAlign(Paint.Align.CENTER);
-        text.setAlpha(235);
-        canvas.drawText("EDIT", x + w / 2f, y + h / 2f - (text.descent() + text.ascent()) / 2f, text);
-    }
-
     private void drawEditor(Canvas canvas) {
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(DARK);
@@ -143,7 +136,7 @@ public final class TouchOverlayView extends View {
         text.setAlpha(195);
         canvas.drawText("Drag a control · two-finger pinch to resize", dp(18), dp(49), text);
         drawEditorButton(canvas, "RESET", getWidth() - dp(222), false);
-        drawEditorButton(canvas, selected == null ? "DONE" : "HIDE", getWidth() - dp(108), selected == null);
+        drawEditorButton(canvas, "DONE", getWidth() - dp(108), true);
     }
 
     private void drawEditorButton(Canvas canvas, String label, float x, boolean primary) {
@@ -168,11 +161,13 @@ public final class TouchOverlayView extends View {
                 down(event, actionIndex);
                 break;
             case MotionEvent.ACTION_MOVE:
+                if (!editing && event.getPointerCount() < 3) cancelEditGesture();
                 move(event);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
+                if (!editing) cancelEditGesture();
                 up(event, actionIndex, action == MotionEvent.ACTION_CANCEL);
                 break;
             default:
@@ -189,9 +184,10 @@ public final class TouchOverlayView extends View {
     private void down(MotionEvent event, int index) {
         float x = event.getX(index), y = event.getY(index);
         int pointer = event.getPointerId(index);
-        if (!editing && pointer == 0 && inEditAffordance(x, y)) {
-            beginEdit();
-            performClick();
+        // Three fingers held together enters configuration. Normal play therefore
+        // draws only original Xbox controls, without an Android-only EDIT button.
+        if (!editing && event.getPointerCount() >= 3) {
+            armEditGesture();
             return;
         }
         if (editing) {
@@ -216,8 +212,6 @@ public final class TouchOverlayView extends View {
     }
 
     private void move(MotionEvent event) {
-        for (int index = 0; index < event.getPointerCount(); ++index) {
-        }
         if (editing) {
             if (selected == null) return;
             if (pointers.size() >= 2) {
@@ -262,7 +256,7 @@ public final class TouchOverlayView extends View {
         }
         if (id != null) {
             press(id, false);
-            if (id.stick) NativeBridge.nativeSetStick(id == ControlLayout.Id.MOVE ? 0 : 1, 0, 0);
+            if (id.stick) NativeBridge.nativeSetStick(id == ControlLayout.Id.LEFT_STICK ? 0 : 1, 0, 0);
         }
         if (pointers.isEmpty()) performClick();
         invalidate();
@@ -275,7 +269,7 @@ public final class TouchOverlayView extends View {
         float dx = x - cx, dy = y - cy;
         float length = (float) Math.hypot(dx, dy);
         if (length > range) { dx = dx / length * range; dy = dy / length * range; }
-        NativeBridge.nativeSetStick(id == ControlLayout.Id.MOVE ? 0 : 1, dx / range, -dy / range);
+        NativeBridge.nativeSetStick(id == ControlLayout.Id.LEFT_STICK ? 0 : 1, dx / range, -dy / range);
     }
 
     private void press(ControlLayout.Id id, boolean down) {
@@ -292,14 +286,9 @@ public final class TouchOverlayView extends View {
     private boolean inEditorAction(float x, float y) {
         if (y > dp(60)) return false;
         if (x >= getWidth() - dp(108)) {
-            if (selected != null) {
-                layout.get(selected).visible = false;
-                selected = null;
-                layout.save(prefs);
-            } else {
-                editing = false;
-                layout.save(prefs);
-            }
+            editing = false;
+            selected = null;
+            layout.save(prefs);
             invalidate();
             return true;
         }
@@ -331,9 +320,8 @@ public final class TouchOverlayView extends View {
         float best = Float.MAX_VALUE;
         for (ControlLayout.Id id : ControlLayout.Id.values()) {
             ControlLayout.Entry entry = layout.get(id);
-            if (!entry.visible) continue;
             float dx = x - entry.x * getWidth(), dy = y - entry.y * getHeight();
-            float scaleX = (id == ControlLayout.Id.RT || id == ControlLayout.Id.LT || id == ControlLayout.Id.RB || id == ControlLayout.Id.LB) ? 1.35f : 1f;
+            float scaleX = isPill(id) ? 1.35f : 1f;
             float normalized = (dx * dx) / (scaleX * scaleX) + dy * dy;
             float hit = radius(id, entry) * 1.18f;
             if (normalized <= hit * hit && normalized < best) { best = normalized; nearest = id; }
@@ -341,8 +329,22 @@ public final class TouchOverlayView extends View {
         return nearest;
     }
 
-    private boolean inEditAffordance(float x, float y) {
-        return x >= getWidth() - dp(86) && y <= dp(54);
+    private boolean isPill(ControlLayout.Id id) {
+        return id == ControlLayout.Id.LEFT_TRIGGER || id == ControlLayout.Id.RIGHT_TRIGGER ||
+                id == ControlLayout.Id.BLACK || id == ControlLayout.Id.WHITE;
+    }
+
+    private void armEditGesture() {
+        if (editGesturePending) return;
+        releaseAll();
+        editGesturePending = true;
+        postDelayed(editGesture, 550);
+    }
+
+    private void cancelEditGesture() {
+        if (!editGesturePending) return;
+        editGesturePending = false;
+        removeCallbacks(editGesture);
     }
 
     private float radius(ControlLayout.Id id, ControlLayout.Entry entry) {

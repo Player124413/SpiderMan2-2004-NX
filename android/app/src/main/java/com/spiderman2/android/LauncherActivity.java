@@ -107,7 +107,7 @@ public final class LauncherActivity extends Activity {
         root.addView(vsync, match(dp(52)));
 
         root.addView(section("TOUCH CONTROLS"));
-        TextView controlText = label("Edit positions live: tap EDIT in-game, drag a control, then pinch with a second finger to resize it.", 14, Color.LTGRAY);
+        TextView controlText = label("Original Xbox controls only. Hold three fingers for 0.5 seconds in-game to edit; drag a control, then pinch with a second finger to resize it.", 14, Color.LTGRAY);
         controlText.setPadding(0, 0, 0, dp(10));
         root.addView(controlText);
         preset = settingSpinner(root, "Starting layout", new String[] {"Balanced", "Compact", "Four-finger claw"});

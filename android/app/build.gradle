@@ -63,17 +63,16 @@ android {
     if (!mockBuild) {
         externalNativeBuild { cmake { path file("../CMakeLists.txt"); version "3.22.1" } }
         sourceSets {
-            main { java.srcDir new File(sdlDir, "android-project/app/src/main/java") }
+            main {
+                java.srcDir "src/native/java"
+                java.srcDir new File(sdlDir, "android-project/app/src/main/java")
+            }
         }
     } else {
-        // Do not merely fake game input: replace both JNI-facing classes so the mock APK
-        // is independently installable and cannot load or claim to contain the game.
+        // Do not merely fake game input: replacement classes live in a distinct source
+        // root, so the mock APK is independently installable and cannot load the game.
         sourceSets {
-            main {
-                java.exclude "com/spiderman2/android/GameActivity.java"
-                java.exclude "com/spiderman2/android/NativeBridge.java"
-                java.srcDir "src/mock/java"
-            }
+            main { java.srcDir "src/mock/java" }
         }
     }
 

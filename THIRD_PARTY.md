@@ -47,3 +47,10 @@ Built on your computer by `build.sh` to make the `.nro`; not part of it. CMake d
 
 The SDK's Windows PC build also uses Dear ImGui and SDL ([`sdk/THIRD_PARTY.txt`](sdk/THIRD_PARTY.txt)); the
 Switch port doesn't.
+
+## Android target
+
+[`android/`](android/README.md) additionally builds with [SDL3](https://github.com/libsdl-org/SDL),
+[glslang](https://github.com/KhronosGroup/glslang) and [Dear ImGui](https://github.com/ocornut/imgui). Its Vulkan
+renderer and threaded D3D8 bridge are adapted from [Black-Android](https://github.com/RanggaCasper/Black-Android)
+under MIT; the complete attribution and licence text are in [`android/THIRD_PARTY.md`](android/THIRD_PARTY.md).

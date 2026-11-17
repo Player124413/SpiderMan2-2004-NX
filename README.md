@@ -21,7 +21,7 @@ swing through New York.
 [![License: MIT](https://img.shields.io/badge/license-MIT-1c2233?style=for-the-badge)](LICENSE)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-support%20the%20port-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/S4I32A0WMU)
 
-**[⬇ Installer page](https://santibros.github.io/SpiderMan2-2004-NX/)** · [Install](#how-to-install) · [Controls](#controls) · [Debug menu](#debug-menu) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md)
+**[⬇ Installer page](https://santibros.github.io/SpiderMan2-2004-NX/)** · [Install](#how-to-install) · [Controls](#controls) · [Debug menu](#debug-menu) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md) · **[Android target](android/README.md)**
 
 [![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S4I32A0WMU)
 
@@ -37,6 +37,10 @@ swing through New York.
 > This port is for the **original Xbox version (2004)** only. The PlayStation 2, GameCube, PC, Game Boy
 > Advance, Nintendo DS and PSP versions are different programs and don't work, and neither do the
 > newer *Spider-Man* games.
+
+> [!NOTE]
+> **Android target: native arm64 Vulkan.** The new [`android/`](android/README.md) project builds an APK from a player's own XBE and generated C++, with a launcher, persistent editable multi-touch controls and performance profiles. It is an
+> early hardware-test target, independent of the released Switch build; see its requirements and build/install instructions before use.
 
 > [!NOTE]
 > **Playable on the Switch.** The port has been played on a Switch Lite, in handheld mode: 0.1.0 ran smoothly at

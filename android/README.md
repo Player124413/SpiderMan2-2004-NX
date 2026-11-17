@@ -56,10 +56,25 @@ layout, Java 17 compilation, dexing, signing and artifact upload. It contains
 runtime or game asset. The workflow checks that condition before upload; the
 artifact is therefore only a CI smoke-test and cannot play the game.
 
-The real native build intentionally has no URL-based game download step. Keep an
-owned disc image and its extracted files off GitHub Actions, Git history, logs and
-artifacts. Generate code locally (or on a private owner-controlled runner) from
-your own `default.xbe`, then use the production build below.
+The real native build intentionally has no URL-based game download step in the
+public mock workflow. Keep an owned disc image and its extracted files off public
+GitHub Actions, Git history, logs and artifacts.
+
+## Owner APK workflow
+
+For a private, owner-controlled fork, use
+[**Build owner Android APK**](../.github/workflows/android-owner-apk.yml) from
+**Actions → Run workflow**. Unlike the mock action, its form has a required
+**image_url** field, an optional **image_sha256** check, and an
+**upload_owner_apk** checkbox. It downloads the supplied HTTPS image to the
+runner only, extracts `default.xbe`, runs `xbe_recomp`, and builds the arm64
+release APK. Source image, XBE and generated C++ are removed at the end.
+
+The workflow deliberately refuses to run in a public repository: dispatch inputs
+and playable artifacts could otherwise expose a player's game material. Create a
+private fork before using its URL field; do not paste an image link into the
+public CI/mock workflow. You can instead build locally with the instructions
+below.
 
 ## Build
 
